@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mapa con Control de Capas</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.26/esri/themes/light/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://js.arcgis.com/4.26/"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+    .map-container {
+        position: relative;
+        height: 100%;
+        width: 100%;
+    }
+    #viewDiv {
+      height: 100%;
+      width: 100%;
+    }
+    .panel-container {
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        width: 30%;
+        background-color: rgba(255, 255, 255, 0.2);
+        box-shadow: -2px 0px 10px rgba(0, 0, 0, 0.3);
+        display: flex;
+        flex-direction: column;
+        z-index: 1000;
+        padding: 10px; /* Espaciado general */
+    }
+    .panel-tabs {
+        display: flex;
+        justify-content: space-around;
+        background-color: transparent;
+        gap: 10px;
+        margin-bottom: 20px; /* Separar de los demás elementos */
+    }
+
+/* Botones de las pestañas */
+    .panel-tab {
+        cursor: pointer;
+        padding: 10px 20px;
+        font-size: 14px;
+        flex: 1;
+        text-align: center;
+        background-color: rgba(38, 198, 218, 0.8); /* Color aguamarina */
+        border-radius: 8px;
+        transition: background-color 0.3s, transform 0.3s;
+        color: white;
+        font-weight: bold;
+        border: none;
+        box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2); /* Sombra */
+    }
+    .panel-tab:hover {
+        background-color: rgba(38, 198, 218, 1);
+        transform: scale(1.05);
+    }
+
+    .panel-tab.active {
+        background-color: rgba(0, 150, 136, 1); /* Verde esmeralda más oscuro */
+    }
+    .panel-content {
+        background-color: rgba(240, 248, 255, 0.9); /* Fondo azul claro */
+        border-radius: 10px; /* Bordes redondeados */
+        padding: 15px; /* Espaciado interno */
+        margin: 10px; /* Espaciado externo */
+        box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1); /* Sombra sutil */
+        overflow-y: auto; /* Scroll si hay mucho contenido */
+    }
+    .panel-content video {
+        width: 100%;
+        border-radius: 10px;
+        margin-bottom: 15px;
+    }
+    .panel-hidden {
+      display: none;
+    }
+    .chart-container {
+      width: 100%;
+      height: 300px;
+    }
+    .floating-items {
+      position: absolute;
+      bottom: 2%; /* Ajustado al 2% */
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 20px;
+      z-index: 1000;
+    }
+    .floating-item {
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      border-radius: 10px;
+      width: 120px;
+      height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+    }
+    .floating-item:hover {
+      background-color: rgba(0, 0, 0, 0.9);
+      box-shadow: 0px 6px 10px rgba(0, 0, 0, 0.5);
+    }
+    .floating-item span {
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    .floating-image {
+      position: absolute;
+      bottom: 20px; /* Separación desde la parte superior */
+      left: 20px; /* Separación desde la parte derecha */
+      z-index: 1000;
+      width: 100px; /* Ancho de la imagen */
+      height: auto; /* Mantener la proporción de la imagen */
+    }
+    .panel-content h2, .panel-content h3 {
+         text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Contenedor del mapa -->
+    <div class="map-container">
+      <div id="viewDiv"></div>
+
+      <!-- Imagen flotante sobre el mapa -->
+      <img src="./images/logo_img.png" alt="Logo" class="floating-image">
+
+      <!-- Elementos flotantes -->
+      <div class="floating-items">
+        <div class="floating-item" id="toggleLayer">
+          <span>Imagen Base</span>
+        </div>
+        <div class="floating-item">
+          <span>Clasificación</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel lateral derecho -->
+    <div class="panel-container">
+      <!-- Tabs -->
+      <div class="panel-tabs">
+        <div class="panel-tab active" data-target="info-tab">Información</div>
+        <div class="panel-tab" data-target="indicators-tab">Indicadores</div>
+      </div>
+
+      <!-- Contenido -->
+      <div id="info-tab" class="panel-content">
+        <video autoplay loop muted style="width: 100%; border-radius: 10px; margin-bottom: 20px;">
+            <source src="./gifs/palm.mp4" type="video/mp4">
+          </video>
+        <h2>Importancia de los cultivos de palma</h2>
+        <p>
+          Los cultivos de palma, especialmente los de coco, son esenciales para muchas comunidades debido a su aporte 
+          a la economía y su relación con el medio ambiente. Desde la producción de aceite, alimentos y fibras hasta la 
+          fabricación de artesanías y materiales de construcción, las palmas son un recurso versátil conocido como el 
+          "Árbol de la Vida".
+        </p>
+        <p>
+          Además, estos cultivos actúan como sumideros de carbono, contribuyendo a la mitigación del cambio climático y 
+          ofreciendo hábitats para la biodiversidad local.
+        </p>
+      
+        <h3>Prácticas agrícolas sostenibles</h3>
+        <p>
+          Aplicar prácticas agrícolas sostenibles en los cultivos de palma ayuda a reducir el desperdicio de recursos como 
+          agua y fertilizantes, proteger el suelo y preservar la biodiversidad. Además, al integrar tecnología, se mejora 
+          la productividad y se asegura que los productos derivados de la palma cumplan con estándares de sostenibilidad, 
+          promoviendo un consumo más consciente y responsable.
+        </p>
+      
+        <h3>El rol de los Sistemas de Información Geográfica (GIS)</h3>
+        <p>
+          Los Sistemas de Información Geográfica (GIS) son herramientas fundamentales para lograr la sostenibilidad de los 
+          cultivos de palma y cumplir con el ODS No. 12. Gracias a los GIS, es posible:
+        </p>
+        <ul>
+          <li>
+            <strong>Mapear y monitorear cultivos:</strong> Identificar las áreas de cultivo, su estado de salud y su impacto 
+            en el entorno mediante mapas detallados e imágenes satelitales.
+          </li>
+          <li>
+            <strong>Optimizar recursos:</strong> Analizar datos geoespaciales para usar de forma eficiente el agua, 
+            fertilizantes y energía, reduciendo costos y evitando el desperdicio.
+          </li>
+          <li>
+            <strong>Detectar problemas a tiempo:</strong> Identificar plagas, enfermedades o degradación del suelo de manera 
+            temprana, lo que permite tomar decisiones rápidas y reducir el impacto ambiental.
+          </li>
+          <li>
+            <strong>Promover la trazabilidad:</strong> Registrar toda la información sobre los cultivos para garantizar que 
+            los productos se producen y distribuyen de manera responsable y transparente.
+          </li>
+          <li>
+            <strong>Fomentar la planificación sostenible:</strong> Evaluar cómo interactúan los cultivos con su entorno para 
+            evitar la expansión descontrolada y proteger los ecosistemas.
+          </li>
+        </ul>
+      </div>
+      <div id="indicators-tab" class="panel-content panel-hidden">
+        <h2>Indicadores</h2>
+        <div id="featureCount" style="margin-top: 10px; font-size: 16px; font-weight: bold; color: #333;">
+          Total identificadas: Cargando...
+        </div>
+        <canvas id="confidenceHistogram" style="margin-top: 20px; width: 100%; height: 300px;"></canvas>
+      </div>
+      
+    </div>
+  </div>
+
+  <script>
+ require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/layers/ImageryLayer",
+  "esri/layers/FeatureLayer",
+  "esri/widgets/Sketch",
+  "esri/layers/GraphicsLayer"
+], function (Map, MapView, ImageryLayer, FeatureLayer, Sketch, GraphicsLayer) {
+  // Crear el mapa
+  var map = new Map({
+    basemap: "topo-vector"
+  });
+
+  // Crear la vista del mapa
+  var view = new MapView({
+    container: "viewDiv",
+    map: map,
+    zoom: 6
+  });
+
+  // Capa base de imagen
+  var imageryLayer = new ImageryLayer({
+    url: "https://geocntr-imagery.bd.esri.com/server/rest/services/Imagery/Image_Palm/ImageServer"
+  });
+
+  // Nueva capa de palmas de coco
+  var coconutLayer = new FeatureLayer({
+    url: "https://geospatialcenter.bd.esri.com/server/rest/services/Hosted/Palms_DetectObjects2/FeatureServer",
+    visible: false,
+    popupTemplate: {
+      // Configurar el contenido del popup
+      title: "Clase: {class}",
+      content: "Esta entidad pertenece a la clase: {class}."
+    },
+    renderer: {
+      type: "simple",
+      symbol: {
+        type: "simple-fill",
+        style: "none",
+        outline: {
+          color: [255, 0, 0, 1],
+          width: 2
+        }
+      }
+    }
+  });
+
+  // Agregar capas al mapa
+  map.addMany([imageryLayer, coconutLayer]);
+
+  // Centrarse en la extensión completa de la capa de coco
+  coconutLayer.load().then(() => {
+    return coconutLayer.queryExtent();
+  }).then(function (response) {
+    if (response.extent) {
+      view.goTo(response.extent); // Ajustar la vista para que se centre en la extensión de la capa
+    } else {
+      console.error("No se pudo obtener la extensión de la capa.");
+    }
+  }).catch(function (error) {
+    console.error("Error al centrar la vista en la capa:", error);
+  });
+
+  // Función para actualizar el total de entidades
+  function updateFeatureCount() {
+    coconutLayer.queryFeatureCount().then(function (count) {
+      const formattedCount = new Intl.NumberFormat('es-ES').format(count);
+      document.getElementById("featureCount").textContent = `Total identificadas: ${formattedCount}`;
+    }).catch(function (error) {
+      console.error("Error al consultar el conteo de entidades:", error);
+    });
+  }
+
+  // Actualizar el conteo inicial de entidades
+  coconutLayer.when(() => {
+    updateFeatureCount();
+    updateHistogram(); // Actualizar histograma al cargar la capa
+  });
+
+  // Función para generar un histograma basado en el campo confidence
+  function updateHistogram() {
+    const query = coconutLayer.createQuery();
+    query.outFields = ["confidence"]; // Obtener solo el campo confidence
+    query.returnGeometry = false;
+
+    coconutLayer.queryFeatures(query).then(function (result) {
+      const confidenceValues = result.features.map(feature => feature.attributes.confidence);
+
+      const min = Math.min(...confidenceValues);
+      const max = Math.max(...confidenceValues);
+      const classSize = (max - min) / 4;
+
+      const classLimits = [
+        { min: min, max: min + classSize },
+        { min: min + classSize, max: min + 2 * classSize },
+        { min: min + 2 * classSize, max: min + 3 * classSize },
+        { min: min + 3 * classSize, max: max }
+      ];
+
+      const classCounts = [0, 0, 0, 0];
+      confidenceValues.forEach(value => {
+        classLimits.forEach((limit, index) => {
+          if (value >= limit.min && value <= limit.max) {
+            classCounts[index]++;
+          }
+        });
+      });
+
+      const labels = classLimits.map(
+        limit => `${limit.min.toFixed(2)} - ${limit.max.toFixed(2)}`
+      );
+
+      const ctx = document.getElementById("confidenceHistogram").getContext("2d");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Niveles de confianza de la clasificación",
+            data: classCounts,
+            backgroundColor: "rgba(255, 99, 132, 0.2)",
+            borderColor: "rgba(255, 99, 132, 1)",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: "Clases de Confianza (%)"
+              }
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: "Cantidad de Entidades"
+              }
+            }
+          }
+        }
+      });
+    }).catch(function (error) {
+      console.error("Error al generar el histograma:", error);
+    });
+  }
+
+  // Función de ON/OFF de capa base
+  document.getElementById("toggleLayer").addEventListener("click", function () {
+    imageryLayer.visible = !imageryLayer.visible;
+    this.querySelector("span").textContent = imageryLayer.visible ? "Layer ON" : "Layer OFF";
+  });
+
+  // Función de ON/OFF para la capa de palmas
+  document.querySelector(".floating-item:nth-child(2)").addEventListener("click", function () {
+    coconutLayer.visible = !coconutLayer.visible;
+    this.querySelector("span").textContent = coconutLayer.visible ? "Clasificación ON" : "Clasificación OFF";
+
+    if (coconutLayer.visible) {
+      updateFeatureCount(); // Actualizar el conteo general cuando la capa esté visible
+      updateHistogram(); // Actualizar el histograma al activar la capa
+    }
+  });
+
+  // Selector de pestañas
+  document.querySelectorAll(".panel-tab").forEach((tab) => {
+    tab.addEventListener("click", (e) => {
+      document.querySelectorAll(".panel-tab").forEach((t) => t.classList.remove("active"));
+      e.target.classList.add("active");
+
+      document.querySelectorAll(".panel-content").forEach((content) =>
+        content.classList.add("panel-hidden")
+      );
+      document.getElementById(e.target.dataset.target).classList.remove("panel-hidden");
+    });
+  });
+});
+
+
+
+
+  </script>
+</body>
+</html>
